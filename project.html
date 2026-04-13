@@ -4,305 +4,602 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>FORMA — 3D Business Website</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
-    body { background: #f8f7f4; font-family: 'Georgia', serif; overflow-x: hidden; cursor: none; }
-
-    /* Custom Cursor */
-    .mouse-dot {
-      width: 8px; height: 8px;
-      background: #6b5ce7; border-radius: 50%;
-      position: fixed; pointer-events: none;
-      z-index: 9999; transform: translate(-50%, -50%);
-      transition: transform 0.1s; mix-blend-mode: multiply;
+    body {
+      background: #0c0c0e;
+      font-family: 'DM Sans', sans-serif;
+      overflow-x: hidden;
+      cursor: none;
+      color: #e8e6e0;
     }
-    .mouse-ring {
-      width: 32px; height: 32px;
-      border: 1px solid #6b5ce7; border-radius: 50%;
+
+    /* ── CURSOR ── */
+    .cursor-dot {
+      width: 6px; height: 6px;
+      background: #c8b8ff;
+      border-radius: 50%;
+      position: fixed; pointer-events: none; z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: width .15s, height .15s, background .2s;
+    }
+    .cursor-ring {
+      width: 36px; height: 36px;
+      border: 1px solid rgba(200, 184, 255, 0.4);
+      border-radius: 50%;
       position: fixed; pointer-events: none; z-index: 9998;
       transform: translate(-50%, -50%);
-      transition: all 0.15s ease; opacity: 0.5;
+      transition: width .3s, height .3s, border-color .3s;
     }
+    body.hovering .cursor-dot { width: 10px; height: 10px; background: #a88dff; }
+    body.hovering .cursor-ring { width: 56px; height: 56px; border-color: rgba(168, 141, 255, 0.3); }
 
-    /* NAV */
+    /* ── NAV ── */
     nav {
       position: fixed; top: 0; left: 0; width: 100%;
       display: flex; justify-content: space-between; align-items: center;
-      padding: 24px 8%; z-index: 100;
-      background: rgba(248,247,244,0.85); backdrop-filter: blur(12px);
-      border-bottom: 0.5px solid rgba(0,0,0,0.06);
+      padding: 22px 7%; z-index: 100;
+      background: rgba(12, 12, 14, 0.7);
+      backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 0.5px solid rgba(200, 184, 255, 0.08);
+      transition: padding .4s;
     }
-    .logo { font-size: 20px; font-weight: 400; color: #1a1a1a; letter-spacing: 2px; }
-    .nav-links { display: flex; gap: 36px; list-style: none; }
+    nav.scrolled { padding: 14px 7%; }
+    .logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px; font-weight: 400; color: #f0eeff;
+      letter-spacing: 4px; text-transform: uppercase;
+    }
+    .logo span { color: #a88dff; }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
     .nav-links a {
-      font-size: 13px; color: #555; text-decoration: none;
-      font-family: 'Helvetica Neue', sans-serif; letter-spacing: 0.5px; transition: color 0.2s;
+      font-size: 12.5px; color: #888; text-decoration: none;
+      letter-spacing: 0.8px; font-weight: 400;
+      transition: color .2s, opacity .2s; position: relative;
     }
-    .nav-links a:hover { color: #6b5ce7; }
+    .nav-links a::after {
+      content: ''; position: absolute; bottom: -3px; left: 0;
+      width: 0; height: 1px; background: #a88dff;
+      transition: width .3s;
+    }
+    .nav-links a:hover { color: #c8b8ff; }
+    .nav-links a:hover::after { width: 100%; }
     .nav-cta {
-      background: #1a1a1a; color: #fff; border: none;
-      padding: 10px 24px; font-size: 13px; letter-spacing: 1px;
-      cursor: none; font-family: 'Helvetica Neue', sans-serif; transition: all 0.3s;
+      background: transparent; color: #c8b8ff;
+      border: 0.5px solid rgba(200, 184, 255, 0.3);
+      padding: 9px 22px; font-size: 12px; letter-spacing: 1.5px;
+      cursor: none; font-family: 'DM Sans', sans-serif;
+      transition: all .3s; text-transform: uppercase;
     }
-    .nav-cta:hover { background: #6b5ce7; }
+    .nav-cta:hover {
+      background: rgba(168, 141, 255, 0.12);
+      border-color: rgba(200, 184, 255, 0.6);
+      color: #e0d4ff;
+    }
 
-    /* HERO */
-    #canvas-container { position: relative; width: 100%; height: 100vh; min-height: 600px; }
-    #three-canvas { display: block; width: 100%; height: 100%; }
-    .overlay {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      pointer-events: none; display: flex; flex-direction: column;
-      justify-content: center; align-items: flex-start; padding: 0 8%; padding-top: 80px;
+    /* ── HERO ── */
+    #hero {
+      position: relative; width: 100%; height: 100vh; min-height: 600px;
+      overflow: hidden;
     }
-    .tag {
-      font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
-      color: #888; margin-bottom: 16px; pointer-events: auto;
-      display: flex; align-items: center; gap: 10px;
+    #hero-canvas { display: block; width: 100%; height: 100%; }
+    .hero-overlay {
+      position: absolute; inset: 0; pointer-events: none;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: flex-start;
+      padding: 0 7%; padding-top: 80px;
     }
-    .tag::before { content: ''; width: 24px; height: 1px; background: #6b5ce7; display: block; }
+    .hero-eyebrow {
+      font-size: 10px; letter-spacing: 4px; text-transform: uppercase;
+      color: #a88dff; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 12px;
+      pointer-events: auto; opacity: 0; animation: fadeUp .8s .3s forwards;
+    }
+    .hero-eyebrow::before {
+      content: ''; width: 32px; height: 1px; background: #a88dff;
+    }
     .hero-title {
-      font-size: clamp(40px, 6vw, 80px); font-weight: 400; color: #1a1a1a;
-      line-height: 1.05; margin-bottom: 24px; max-width: 620px; pointer-events: auto;
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(44px, 6.5vw, 90px);
+      font-weight: 400; color: #f0eeff;
+      line-height: 1.0; margin-bottom: 28px;
+      max-width: 640px; pointer-events: auto;
+      opacity: 0; animation: fadeUp .8s .5s forwards;
     }
-    .hero-title em { font-style: italic; color: #6b5ce7; }
+    .hero-title em { font-style: italic; color: #a88dff; }
+    .hero-title .line2 { display: block; color: #888; font-size: 78%; }
     .hero-sub {
-      font-size: 16px; color: #666; max-width: 400px; line-height: 1.8;
-      margin-bottom: 40px; font-family: 'Helvetica Neue', sans-serif; pointer-events: auto;
+      font-size: 15px; color: #666; max-width: 380px;
+      line-height: 1.9; margin-bottom: 44px;
+      pointer-events: auto;
+      opacity: 0; animation: fadeUp .8s .7s forwards;
     }
-    .btn-group { display: flex; gap: 12px; pointer-events: auto; }
+    .btn-group {
+      display: flex; gap: 14px; pointer-events: auto;
+      opacity: 0; animation: fadeUp .8s .9s forwards;
+    }
     .btn-primary {
-      background: #1a1a1a; color: #fff; border: none;
-      padding: 15px 36px; font-size: 13px; letter-spacing: 1.5px;
-      cursor: none; font-family: 'Helvetica Neue', sans-serif; transition: all 0.3s;
+      background: #a88dff; color: #0c0c0e;
+      border: none; padding: 14px 34px;
+      font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+      cursor: none; font-family: 'DM Sans', sans-serif;
+      transition: all .3s; font-weight: 500;
     }
-    .btn-primary:hover { background: #6b5ce7; transform: translateY(-2px); }
-    .btn-outline {
-      background: transparent; color: #1a1a1a; border: 1px solid #1a1a1a;
-      padding: 15px 36px; font-size: 13px; letter-spacing: 1.5px;
-      cursor: none; font-family: 'Helvetica Neue', sans-serif; transition: all 0.3s;
+    .btn-primary:hover {
+      background: #c8b8ff; transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(168, 141, 255, 0.35);
     }
-    .btn-outline:hover { background: #f0eeff; border-color: #6b5ce7; color: #6b5ce7; }
-    .scroll-hint {
-      position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%);
+    .btn-ghost {
+      background: transparent; color: #888;
+      border: 0.5px solid rgba(255,255,255,0.12);
+      padding: 14px 34px; font-size: 12px;
+      letter-spacing: 2px; text-transform: uppercase;
+      cursor: none; font-family: 'DM Sans', sans-serif; transition: all .3s;
+    }
+    .btn-ghost:hover {
+      color: #c8b8ff; border-color: rgba(200, 184, 255, 0.35);
+      background: rgba(168, 141, 255, 0.06);
+    }
+    .hero-scroll {
+      position: absolute; bottom: 40px; left: 50%;
+      transform: translateX(-50%);
       display: flex; flex-direction: column; align-items: center; gap: 10px;
-      font-size: 10px; letter-spacing: 3px; color: #aaa;
-      font-family: 'Helvetica Neue', sans-serif; pointer-events: none;
     }
-    .scroll-line {
-      width: 1px; height: 44px;
-      background: linear-gradient(to bottom, #6b5ce7, transparent);
-      animation: scrollAnim 2s ease-in-out infinite;
+    .hero-scroll-text {
+      font-size: 9px; letter-spacing: 4px;
+      color: rgba(255,255,255,0.2); text-transform: uppercase;
     }
-    @keyframes scrollAnim {
-      0%,100%{ opacity:0.3; transform:scaleY(0.4) translateY(-8px); }
-      50%{ opacity:1; transform:scaleY(1) translateY(0); }
+    .scroll-bar {
+      width: 1px; height: 50px;
+      background: linear-gradient(to bottom, #a88dff, transparent);
+      animation: scrollPulse 2.2s ease-in-out infinite;
+    }
+    @keyframes scrollPulse {
+      0%, 100% { transform: scaleY(.3) translateY(-10px); opacity: .3; }
+      50% { transform: scaleY(1) translateY(0); opacity: 1; }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    /* MARQUEE */
-    .marquee-strip {
-      background: #6b5ce7; padding: 14px 0; overflow: hidden; white-space: nowrap;
+    /* ── FLOATING STATS BAR ── */
+    .stats-float {
+      background: rgba(20, 18, 28, 0.95);
+      border: 0.5px solid rgba(200, 184, 255, 0.1);
+      backdrop-filter: blur(20px);
+      padding: 28px 7%;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
     }
-    .marquee-track { display: inline-flex; animation: marquee 18s linear infinite; }
+    .stat-item { text-align: center; }
+    .stat-num {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(32px, 4vw, 52px);
+      color: #f0eeff; font-weight: 400; line-height: 1;
+    }
+    .stat-num b { color: #a88dff; font-weight: 400; }
+    .stat-lbl {
+      font-size: 10px; letter-spacing: 2.5px; color: #444;
+      text-transform: uppercase; margin-top: 8px;
+    }
+
+    /* ── MARQUEE ── */
+    .marquee {
+      background: #a88dff;
+      padding: 13px 0; overflow: hidden;
+    }
+    .marquee-track { display: inline-flex; animation: marquee 20s linear infinite; }
     .marquee-item {
-      font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: #fff;
-      font-family: 'Helvetica Neue', sans-serif; padding: 0 40px; opacity: 0.85;
-    }
-    .marquee-dot { color: rgba(255,255,255,0.4); padding: 0 8px; }
-    @keyframes marquee { 0%{ transform: translateX(0); } 100%{ transform: translateX(-50%); } }
-
-    /* FEATURES */
-    .features { background: #fff; padding: 110px 8%; }
-    .section-label {
       font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
-      color: #6b5ce7; margin-bottom: 12px; font-family: 'Helvetica Neue', sans-serif;
+      color: rgba(12, 12, 14, 0.7);
+      font-family: 'DM Sans', sans-serif; padding: 0 36px;
+      display: flex; align-items: center; gap: 12px;
     }
+    .marquee-item::after {
+      content: '◆'; font-size: 6px; color: rgba(12, 12, 14, 0.35);
+    }
+    @keyframes marquee { to { transform: translateX(-50%); } }
+
+    /* ── SECTION COMMONS ── */
+    .section-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+      color: #a88dff; margin-bottom: 16px;
+    }
+    .section-badge::before { content: ''; width: 20px; height: 1px; background: #a88dff; }
     .section-title {
-      font-size: clamp(30px, 4vw, 52px); color: #1a1a1a; font-weight: 400;
-      margin-bottom: 64px; max-width: 500px; line-height: 1.15;
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(32px, 4vw, 54px);
+      color: #f0eeff; font-weight: 400;
+      line-height: 1.12; margin-bottom: 16px;
     }
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 2px; }
-    .card {
-      background: #f8f7f4; padding: 44px 32px; transition: all 0.45s;
-      cursor: none; position: relative; overflow: hidden;
-    }
-    .card::before {
-      content: ''; position: absolute; inset: 0; background: #6b5ce7;
-      transform: scaleY(0); transform-origin: bottom;
-      transition: transform 0.45s cubic-bezier(0.23,1,0.32,1); z-index: 0;
-    }
-    .card:hover::before { transform: scaleY(1); }
-    .card:hover .card-num, .card:hover .card-title, .card:hover .card-text { color: #fff; }
-    .card-num {
-      font-size: 11px; letter-spacing: 3px; color: #ccc; margin-bottom: 44px;
-      font-family: 'Helvetica Neue', sans-serif; position: relative; z-index: 1; transition: color 0.4s;
-    }
-    .card-icon { font-size: 26px; margin-bottom: 18px; position: relative; z-index: 1; }
-    .card-title {
-      font-size: 20px; color: #1a1a1a; margin-bottom: 12px; font-weight: 400;
-      position: relative; z-index: 1; transition: color 0.4s;
-    }
-    .card-text {
-      font-size: 13px; color: #999; line-height: 1.8;
-      font-family: 'Helvetica Neue', sans-serif; position: relative; z-index: 1; transition: color 0.4s;
+    .section-sub {
+      font-size: 14px; color: #555; line-height: 1.9; max-width: 460px;
     }
 
-    /* SHOWCASE */
+    /* ── FEATURES ── */
+    .features {
+      background: #0c0c0e;
+      padding: 120px 7%;
+    }
+    .features-header {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 60px; margin-bottom: 72px; align-items: end;
+    }
+    @media(max-width: 768px) { .features-header { grid-template-columns: 1fr; } }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1px; background: rgba(200, 184, 255, 0.05);
+    }
+    .card {
+      background: #0c0c0e;
+      padding: 48px 36px;
+      transition: background .45s; cursor: none;
+      position: relative; overflow: hidden;
+    }
+    .card-glow {
+      position: absolute; inset: 0; opacity: 0;
+      background: radial-gradient(circle at 50% 0%, rgba(168, 141, 255, 0.12) 0%, transparent 70%);
+      transition: opacity .45s;
+      pointer-events: none;
+    }
+    .card:hover .card-glow { opacity: 1; }
+    .card:hover { background: #111015; }
+    .card-num {
+      font-size: 10px; letter-spacing: 3px; color: #2a2830;
+      font-weight: 400; margin-bottom: 40px; position: relative;
+    }
+    .card-icon {
+      font-size: 28px; margin-bottom: 20px; position: relative;
+      transition: transform .3s;
+    }
+    .card:hover .card-icon { transform: scale(1.15) rotate(-5deg); }
+    .card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 21px; color: #d8d0f0; font-weight: 400;
+      margin-bottom: 14px; position: relative; transition: color .3s;
+    }
+    .card:hover .card-title { color: #c8b8ff; }
+    .card-text {
+      font-size: 13px; color: #444; line-height: 1.85;
+      position: relative;
+    }
+    .card:hover .card-text { color: #666; }
+
+    /* ── SHOWCASE ── */
     .showcase {
-      background: #f8f7f4; padding: 110px 8%;
-      display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center;
+      padding: 120px 7%;
+      background: #0a090d;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 90px; align-items: center;
     }
-    @media(max-width: 768px){ .showcase{ grid-template-columns: 1fr; } }
+    @media(max-width: 900px) { .showcase { grid-template-columns: 1fr; } }
     .showcase-visual {
-      height: 420px; background: #1a1a1a; position: relative; overflow: hidden;
+      height: 480px; position: relative; overflow: hidden;
+      border: 0.5px solid rgba(200, 184, 255, 0.08);
     }
-    #showcase-canvas { width: 100%; height: 100%; display: block; }
-    .showcase-content {}
-    .showcase-content .section-label { margin-bottom: 16px; }
-    .showcase-content h2 {
-      font-size: clamp(28px, 3.5vw, 44px); color: #1a1a1a; font-weight: 400;
-      line-height: 1.2; margin-bottom: 24px;
+    .showcase-visual::before {
+      content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+      background:
+        linear-gradient(to right, #0a090d 0%, transparent 8%),
+        linear-gradient(to left, #0a090d 0%, transparent 8%),
+        linear-gradient(to bottom, #0a090d 0%, transparent 10%),
+        linear-gradient(to top, #0a090d 0%, transparent 10%);
     }
+    #showcase-canvas { width: 100%; height: 100%; display: block; background: #0a090d; }
+    .showcase-content .section-title { max-width: 380px; }
     .showcase-content p {
-      font-size: 14px; color: #777; line-height: 1.9;
-      font-family: 'Helvetica Neue', sans-serif; margin-bottom: 36px;
+      font-size: 14px; color: #555; line-height: 1.9; margin-bottom: 40px;
     }
     .feature-list { list-style: none; }
     .feature-list li {
-      font-size: 13px; color: #555; font-family: 'Helvetica Neue', sans-serif;
-      padding: 10px 0; border-bottom: 0.5px solid #eee;
-      display: flex; align-items: center; gap: 12px;
+      font-size: 13px; color: #555; padding: 12px 0;
+      border-bottom: 0.5px solid rgba(255,255,255,0.04);
+      display: flex; align-items: center; gap: 14px;
+      transition: color .2s;
     }
-    .feature-list li::before { content: ''; width: 6px; height: 6px; background: #6b5ce7; border-radius: 50%; flex-shrink: 0; }
-
-    /* STATS */
-    .stats {
-      background: #1a1a1a; padding: 80px 8%;
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 40px;
-    }
-    .stat { text-align: center; }
-    .stat-num { font-size: clamp(40px, 5vw, 60px); color: #fff; font-weight: 400; line-height: 1; }
-    .stat-num span { color: #6b5ce7; }
-    .stat-label {
-      font-size: 11px; letter-spacing: 2.5px; color: #555; text-transform: uppercase;
-      margin-top: 10px; font-family: 'Helvetica Neue', sans-serif;
+    .feature-list li:hover { color: #a88dff; }
+    .feature-list li::before {
+      content: ''; width: 5px; height: 5px;
+      background: #a88dff; border-radius: 50%; flex-shrink: 0;
+      box-shadow: 0 0 8px rgba(168, 141, 255, 0.6);
     }
 
-    /* TESTIMONIAL */
-    .testimonials { background: #fff; padding: 110px 8%; }
-    .t-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2px; margin-top: 60px; }
-    .t-card { background: #f8f7f4; padding: 40px 32px; }
-    .t-quote { font-size: 15px; color: #333; line-height: 1.8; margin-bottom: 28px; font-style: italic; }
-    .t-author { display: flex; align-items: center; gap: 12px; }
+    /* ── 3D SCENE SECTION ── */
+    .scene-section {
+      background: #0c0c0e;
+      padding: 120px 7%;
+      text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .scene-section::before {
+      content: ''; position: absolute;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(168, 141, 255, 0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    #torus-canvas-wrap {
+      width: 100%; max-width: 700px; height: 500px;
+      margin: 60px auto 0; position: relative;
+    }
+    #torus-canvas { width: 100%; height: 100%; display: block; }
+    .scene-labels {
+      display: flex; justify-content: center; gap: 32px;
+      margin-top: 40px; flex-wrap: wrap;
+    }
+    .scene-label {
+      font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+      color: #333; display: flex; align-items: center; gap: 8px;
+    }
+    .scene-label-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+    }
+
+    /* ── TESTIMONIALS ── */
+    .testimonials { background: #0a090d; padding: 120px 7%; }
+    .t-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1px; background: rgba(200, 184, 255, 0.05);
+      margin-top: 64px;
+    }
+    .t-card {
+      background: #0a090d; padding: 44px 36px;
+      transition: background .3s;
+    }
+    .t-card:hover { background: #0d0c12; }
+    .t-stars { display: flex; gap: 3px; margin-bottom: 20px; }
+    .t-star { color: #a88dff; font-size: 12px; }
+    .t-quote {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px; color: #888; line-height: 1.85;
+      margin-bottom: 30px; font-style: italic;
+    }
+    .t-author { display: flex; align-items: center; gap: 14px; }
     .t-avatar {
-      width: 40px; height: 40px; border-radius: 50%; background: #6b5ce7;
+      width: 42px; height: 42px; border-radius: 50%;
+      background: rgba(168, 141, 255, 0.15);
+      border: 1px solid rgba(168, 141, 255, 0.2);
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 500; color: #fff; font-family: 'Helvetica Neue', sans-serif;
+      font-size: 13px; font-weight: 500; color: #a88dff;
     }
-    .t-name { font-size: 13px; font-weight: 500; color: #1a1a1a; font-family: 'Helvetica Neue', sans-serif; }
-    .t-role { font-size: 12px; color: #aaa; font-family: 'Helvetica Neue', sans-serif; }
+    .t-name { font-size: 13px; font-weight: 500; color: #d0c8e8; }
+    .t-role { font-size: 11px; color: #444; letter-spacing: .5px; }
 
-    /* CTA */
-    .cta { background: #6b5ce7; padding: 110px 8%; text-align: center; }
-    .cta-title { font-size: clamp(36px, 5vw, 68px); color: #fff; font-weight: 400; margin-bottom: 20px; }
-    .cta-sub { font-size: 16px; color: rgba(255,255,255,0.65); margin-bottom: 44px; font-family: 'Helvetica Neue', sans-serif; }
-    .btn-white {
-      background: #fff; color: #6b5ce7; border: none;
-      padding: 16px 52px; font-size: 14px; letter-spacing: 1.5px;
-      cursor: none; font-family: 'Helvetica Neue', sans-serif; transition: all 0.3s;
+    /* ── PROCESS SECTION ── */
+    .process { background: #0c0c0e; padding: 120px 7%; }
+    .process-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 40px; margin-top: 72px;
+      position: relative;
     }
-    .btn-white:hover { background: #1a1a1a; color: #fff; transform: translateY(-2px); }
+    .process-steps::before {
+      content: ''; position: absolute;
+      top: 28px; left: 8%; right: 8%;
+      height: 0.5px; background: rgba(200, 184, 255, 0.08);
+    }
+    .process-step { text-align: center; }
+    .step-num {
+      width: 56px; height: 56px; border-radius: 50%;
+      border: 0.5px solid rgba(200, 184, 255, 0.15);
+      background: rgba(168, 141, 255, 0.06);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 24px;
+      font-family: 'Playfair Display', serif;
+      font-size: 20px; color: #a88dff;
+      transition: all .3s;
+    }
+    .process-step:hover .step-num {
+      background: rgba(168, 141, 255, 0.14);
+      border-color: rgba(200, 184, 255, 0.4);
+      box-shadow: 0 0 30px rgba(168, 141, 255, 0.2);
+    }
+    .step-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px; color: #d0c8e8; margin-bottom: 10px;
+    }
+    .step-text { font-size: 12.5px; color: #444; line-height: 1.8; }
 
-    /* FOOTER */
+    /* ── CTA ── */
+    .cta {
+      background: #0a090d; padding: 140px 7%;
+      text-align: center; position: relative; overflow: hidden;
+    }
+    .cta::before {
+      content: ''; position: absolute;
+      top: -200px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(168, 141, 255, 0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .cta-badge {
+      display: inline-block;
+      font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+      color: #a88dff; border: 0.5px solid rgba(168, 141, 255, 0.3);
+      padding: 7px 18px; margin-bottom: 28px;
+    }
+    .cta-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(40px, 6vw, 76px);
+      color: #f0eeff; font-weight: 400;
+      line-height: 1.06; margin-bottom: 22px;
+    }
+    .cta-title em { color: #a88dff; font-style: italic; }
+    .cta-sub {
+      font-size: 15px; color: #555; margin-bottom: 52px;
+      max-width: 440px; margin-left: auto; margin-right: auto; line-height: 1.8;
+    }
+    .btn-cta {
+      background: #a88dff; color: #0c0c0e;
+      border: none; padding: 17px 52px;
+      font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+      cursor: none; font-family: 'DM Sans', sans-serif;
+      font-weight: 500; transition: all .3s; display: inline-block;
+    }
+    .btn-cta:hover {
+      background: #c8b8ff; transform: translateY(-3px);
+      box-shadow: 0 16px 50px rgba(168, 141, 255, 0.4);
+    }
+    .cta-note {
+      font-size: 11px; color: #333; margin-top: 18px; letter-spacing: .5px;
+    }
+
+    /* ── FOOTER ── */
     footer {
-      background: #1a1a1a; padding: 60px 8%;
-      display: flex; justify-content: space-between; align-items: center;
-      flex-wrap: wrap; gap: 20px;
+      background: #070709;
+      padding: 60px 7% 40px;
+      border-top: 0.5px solid rgba(200, 184, 255, 0.05);
     }
-    .footer-logo { font-size: 18px; color: #fff; letter-spacing: 2px; }
-    .footer-links { display: flex; gap: 28px; list-style: none; }
-    .footer-links a { font-size: 12px; color: #555; text-decoration: none; font-family: 'Helvetica Neue', sans-serif; transition: color 0.2s; }
-    .footer-links a:hover { color: #6b5ce7; }
-    .footer-copy { font-size: 12px; color: #444; font-family: 'Helvetica Neue', sans-serif; }
+    .footer-top {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      flex-wrap: wrap; gap: 40px; margin-bottom: 50px;
+    }
+    .footer-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px; color: #f0eeff; letter-spacing: 4px;
+    }
+    .footer-logo span { color: #a88dff; }
+    .footer-tagline {
+      font-size: 12px; color: #333; margin-top: 8px; max-width: 200px; line-height: 1.7;
+    }
+    .footer-links { display: flex; gap: 24px; list-style: none; }
+    .footer-links a {
+      font-size: 12px; color: #444; text-decoration: none;
+      letter-spacing: .5px; transition: color .2s;
+    }
+    .footer-links a:hover { color: #a88dff; }
+    .footer-bottom {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px;
+      padding-top: 24px;
+      border-top: 0.5px solid rgba(255,255,255,0.04);
+    }
+    .footer-copy { font-size: 11px; color: #2a2830; letter-spacing: .5px; }
+    .footer-badge {
+      font-size: 10px; letter-spacing: 2px; color: #2a2830;
+      text-transform: uppercase;
+    }
   </style>
 </head>
 <body>
 
-  <div class="mouse-dot" id="cursor"></div>
-  <div class="mouse-ring" id="ring"></div>
+  <div class="cursor-dot" id="cd"></div>
+  <div class="cursor-ring" id="cr"></div>
 
   <!-- NAV -->
-  <nav>
-    <div class="logo">FORMA</div>
+  <nav id="nav">
+    <div class="logo">FOR<span>M</span>A</div>
     <ul class="nav-links">
       <li><a href="#features">Product</a></li>
       <li><a href="#showcase">Solutions</a></li>
-      <li><a href="#stats">About</a></li>
+      <li><a href="#process">Process</a></li>
       <li><a href="#testimonials">Clients</a></li>
     </ul>
     <button class="nav-cta">Get Started</button>
   </nav>
 
   <!-- HERO -->
-  <div id="canvas-container">
-    <canvas id="three-canvas"></canvas>
-    <div class="overlay">
-      <div class="tag">Next-gen platform</div>
-      <h1 class="hero-title">Build products<br>that <em>matter</em></h1>
-      <p class="hero-sub">A powerful business suite designed for teams who move fast and think clearly. Beautifully engineered.</p>
+  <section id="hero">
+    <canvas id="hero-canvas"></canvas>
+    <div class="hero-overlay">
+      <div class="hero-eyebrow">Next-generation platform</div>
+      <h1 class="hero-title">
+        Shape your<br>
+        <em>future</em> today
+        <span class="line2">engineered for impact</span>
+      </h1>
+      <p class="hero-sub">A powerful business suite built for teams who move fast, think clearly, and build things that last.</p>
       <div class="btn-group">
         <button class="btn-primary">Get Started</button>
-        <button class="btn-outline">Watch Demo</button>
+        <button class="btn-ghost">Watch Demo ↗</button>
       </div>
     </div>
-    <div class="scroll-hint">
-      <div class="scroll-line"></div>
-      SCROLL
+    <div class="hero-scroll">
+      <div class="scroll-bar"></div>
+      <div class="hero-scroll-text">Scroll</div>
+    </div>
+  </section>
+
+  <!-- STATS FLOAT -->
+  <div class="stats-float">
+    <div class="stat-item">
+      <div class="stat-num">98<b>%</b></div>
+      <div class="stat-lbl">Uptime SLA</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">3<b>M+</b></div>
+      <div class="stat-lbl">Active Users</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">140<b>+</b></div>
+      <div class="stat-lbl">Countries</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">4<b>×</b></div>
+      <div class="stat-lbl">Faster Delivery</div>
     </div>
   </div>
 
   <!-- MARQUEE -->
-  <div class="marquee-strip">
-    <div class="marquee-track" id="marquee">
-      <span class="marquee-item">Product Design <span class="marquee-dot">◆</span></span>
-      <span class="marquee-item">Business Solutions <span class="marquee-dot">◆</span></span>
-      <span class="marquee-item">Real-time Analytics <span class="marquee-dot">◆</span></span>
-      <span class="marquee-item">Enterprise Ready <span class="marquee-dot">◆</span></span>
-      <span class="marquee-item">Scalable Infrastructure <span class="marquee-dot">◆</span></span>
-      <span class="marquee-item">Smart Automation <span class="marquee-dot">◆</span></span>
-      <span class="marquee-item">Product Design <span class="marquee-dot">◆</span></span>
-      <span class="marquee-item">Business Solutions <span class="marquee-dot">◆</span></span>
-      <span class="marquee-item">Real-time Analytics <span class="marquee-dot">◆</span></span>
-      <span class="marquee-item">Enterprise Ready <span class="marquee-dot">◆</span></span>
-      <span class="marquee-item">Scalable Infrastructure <span class="marquee-dot">◆</span></span>
-      <span class="marquee-item">Smart Automation <span class="marquee-dot">◆</span></span>
+  <div class="marquee">
+    <div class="marquee-track" id="marquee-track">
+      <span class="marquee-item">Product Design</span>
+      <span class="marquee-item">Business Solutions</span>
+      <span class="marquee-item">Real-time Analytics</span>
+      <span class="marquee-item">Enterprise Ready</span>
+      <span class="marquee-item">Scalable Infrastructure</span>
+      <span class="marquee-item">Smart Automation</span>
+      <span class="marquee-item">Product Design</span>
+      <span class="marquee-item">Business Solutions</span>
+      <span class="marquee-item">Real-time Analytics</span>
+      <span class="marquee-item">Enterprise Ready</span>
+      <span class="marquee-item">Scalable Infrastructure</span>
+      <span class="marquee-item">Smart Automation</span>
     </div>
   </div>
 
   <!-- FEATURES -->
   <section class="features" id="features">
-    <div class="section-label">Why choose Forma</div>
-    <h2 class="section-title">Everything your team needs, nothing it doesn't.</h2>
+    <div class="features-header">
+      <div>
+        <div class="section-badge">Why Forma</div>
+        <h2 class="section-title">Everything your team needs.</h2>
+      </div>
+      <p class="section-sub" style="align-self:center">
+        Thoughtfully designed to fit the way modern teams actually work — not force them into rigid structures built for a different era.
+      </p>
+    </div>
     <div class="cards">
       <div class="card">
+        <div class="card-glow"></div>
         <div class="card-num">01</div>
         <div class="card-icon">◈</div>
         <div class="card-title">Modular Design</div>
         <div class="card-text">Plug-and-play components that adapt to your workflow without friction or compromise.</div>
       </div>
       <div class="card">
+        <div class="card-glow"></div>
         <div class="card-num">02</div>
         <div class="card-icon">⬡</div>
         <div class="card-title">Real-time Sync</div>
         <div class="card-text">All data, all devices, always in sync. Zero lag, zero compromise on performance.</div>
       </div>
       <div class="card">
+        <div class="card-glow"></div>
         <div class="card-num">03</div>
         <div class="card-icon">◉</div>
         <div class="card-title">Smart Analytics</div>
         <div class="card-text">Deep insights surfaced automatically so you decide faster, better, with confidence.</div>
       </div>
       <div class="card">
+        <div class="card-glow"></div>
         <div class="card-num">04</div>
         <div class="card-icon">⬢</div>
         <div class="card-title">Enterprise Ready</div>
@@ -317,8 +614,8 @@
       <canvas id="showcase-canvas"></canvas>
     </div>
     <div class="showcase-content">
-      <div class="section-label">How it works</div>
-      <h2>Designed for the way teams actually work</h2>
+      <div class="section-badge">How it works</div>
+      <h2 class="section-title">Designed for the way teams actually work</h2>
       <p>Forma adapts to your existing processes rather than forcing you into rigid structures. Flexible, powerful, and intuitive from day one.</p>
       <ul class="feature-list">
         <li>One-click onboarding for any team size</li>
@@ -330,32 +627,62 @@
     </div>
   </section>
 
-  <!-- STATS -->
-  <section class="stats" id="stats">
-    <div class="stat">
-      <div class="stat-num">98<span>%</span></div>
-      <div class="stat-label">Uptime SLA</div>
+  <!-- 3D SCENE -->
+  <section class="scene-section" id="scene">
+    <div class="section-badge" style="justify-content:center">3D Visualization</div>
+    <h2 class="section-title">Architecture built for scale</h2>
+    <p class="section-sub" style="margin:0 auto; text-align:center">
+      Beneath the surface, a sophisticated mesh of interconnected systems works in perfect harmony.
+    </p>
+    <div id="torus-canvas-wrap">
+      <canvas id="torus-canvas"></canvas>
     </div>
-    <div class="stat">
-      <div class="stat-num">3<span>M+</span></div>
-      <div class="stat-label">Active Users</div>
+    <div class="scene-labels">
+      <div class="scene-label"><div class="scene-label-dot" style="background:#a88dff"></div>Core System</div>
+      <div class="scene-label"><div class="scene-label-dot" style="background:#ff9d7e"></div>Data Layer</div>
+      <div class="scene-label"><div class="scene-label-dot" style="background:#7edcff"></div>Network Mesh</div>
     </div>
-    <div class="stat">
-      <div class="stat-num">140<span>+</span></div>
-      <div class="stat-label">Countries</div>
+  </section>
+
+  <!-- PROCESS -->
+  <section class="process" id="process">
+    <div style="text-align:center">
+      <div class="section-badge" style="justify-content:center">Our Process</div>
+      <h2 class="section-title">From idea to impact, fast</h2>
     </div>
-    <div class="stat">
-      <div class="stat-num">4<span>x</span></div>
-      <div class="stat-label">Faster Delivery</div>
+    <div class="process-steps">
+      <div class="process-step">
+        <div class="step-num">I</div>
+        <div class="step-title">Discover</div>
+        <div class="step-text">We map your existing workflows and identify leverage points for maximum impact.</div>
+      </div>
+      <div class="process-step">
+        <div class="step-num">II</div>
+        <div class="step-title">Design</div>
+        <div class="step-text">Our team crafts a tailored configuration that fits your team like a glove.</div>
+      </div>
+      <div class="process-step">
+        <div class="step-num">III</div>
+        <div class="step-title">Deploy</div>
+        <div class="step-text">One-click onboarding. Your team is live in hours, not months.</div>
+      </div>
+      <div class="process-step">
+        <div class="step-num">IV</div>
+        <div class="step-title">Scale</div>
+        <div class="step-text">Forma grows with you. Add modules, users, and integrations at any time.</div>
+      </div>
     </div>
   </section>
 
   <!-- TESTIMONIALS -->
   <section class="testimonials" id="testimonials">
-    <div class="section-label">Client voices</div>
-    <h2 class="section-title">Trusted by teams who demand the best.</h2>
+    <div class="section-badge">Client voices</div>
+    <h2 class="section-title">Trusted by teams who<br>demand the best.</h2>
     <div class="t-grid">
       <div class="t-card">
+        <div class="t-stars">
+          <span class="t-star">★</span><span class="t-star">★</span><span class="t-star">★</span><span class="t-star">★</span><span class="t-star">★</span>
+        </div>
         <p class="t-quote">"Forma transformed how our team collaborates. We ship twice as fast with half the overhead. Genuinely remarkable."</p>
         <div class="t-author">
           <div class="t-avatar">SR</div>
@@ -366,6 +693,9 @@
         </div>
       </div>
       <div class="t-card">
+        <div class="t-stars">
+          <span class="t-star">★</span><span class="t-star">★</span><span class="t-star">★</span><span class="t-star">★</span><span class="t-star">★</span>
+        </div>
         <p class="t-quote">"The analytics alone were worth switching. We finally understand our data and it actually drives decisions."</p>
         <div class="t-author">
           <div class="t-avatar">AK</div>
@@ -376,6 +706,9 @@
         </div>
       </div>
       <div class="t-card">
+        <div class="t-stars">
+          <span class="t-star">★</span><span class="t-star">★</span><span class="t-star">★</span><span class="t-star">★</span><span class="t-star">★</span>
+        </div>
         <p class="t-quote">"Onboarding was seamless and the support team is world-class. We've never looked back since switching."</p>
         <div class="t-author">
           <div class="t-avatar">MP</div>
@@ -390,194 +723,445 @@
 
   <!-- CTA -->
   <section class="cta">
-    <h2 class="cta-title">Ready to build<br>something great?</h2>
-    <p class="cta-sub">Join thousands of teams already using Forma to do their best work.</p>
-    <button class="btn-white">Start for free — it's on us</button>
+    <div class="cta-badge">Start Today</div>
+    <h2 class="cta-title">Ready to build<br><em>something great?</em></h2>
+    <p class="cta-sub">Join thousands of teams already using Forma to ship faster, think clearer, and grow stronger.</p>
+    <button class="btn-cta">Start for free — it's on us</button>
+    <p class="cta-note">No credit card required · Setup in under 5 minutes</p>
   </section>
 
   <!-- FOOTER -->
   <footer>
-    <div class="footer-logo">FORMA</div>
-    <ul class="footer-links">
-      <li><a href="#">Privacy</a></li>
-      <li><a href="#">Terms</a></li>
-      <li><a href="#">Docs</a></li>
-      <li><a href="#">Blog</a></li>
-    </ul>
-    <div class="footer-copy">© 2026 Forma Inc. All rights reserved.</div>
+    <div class="footer-top">
+      <div>
+        <div class="footer-logo">FOR<span>M</span>A</div>
+        <div class="footer-tagline">Beautifully engineered for teams who move fast.</div>
+      </div>
+      <ul class="footer-links">
+        <li><a href="#">Privacy</a></li>
+        <li><a href="#">Terms</a></li>
+        <li><a href="#">Docs</a></li>
+        <li><a href="#">Blog</a></li>
+        <li><a href="#">Careers</a></li>
+      </ul>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2026 Forma Inc. All rights reserved.</div>
+      <div class="footer-badge">Made with precision</div>
+    </div>
   </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script>
-    // ─── CUSTOM CURSOR ───────────────────────────────────────
-    const cursor = document.getElementById('cursor');
-    const ring = document.getElementById('ring');
-    let mx = 0, my = 0, rx = 0, ry = 0;
-    document.addEventListener('mousemove', e => {
-      mx = e.clientX; my = e.clientY;
-      cursor.style.left = mx + 'px'; cursor.style.top = my + 'px';
+  // ── CURSOR ──────────────────────────────────────────────────────
+  const cd = document.getElementById('cd'), cr = document.getElementById('cr');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cd.style.left = mx+'px'; cd.style.top = my+'px';
+  });
+  (function animCursor(){
+    rx += (mx-rx)*.1; ry += (my-ry)*.1;
+    cr.style.left = rx+'px'; cr.style.top = ry+'px';
+    requestAnimationFrame(animCursor);
+  })();
+  document.querySelectorAll('button,a,.card,.t-card,.process-step,.feature-list li').forEach(el=>{
+    el.addEventListener('mouseenter',()=>document.body.classList.add('hovering'));
+    el.addEventListener('mouseleave',()=>document.body.classList.remove('hovering'));
+  });
+
+  // ── NAV SCROLL ──────────────────────────────────────────────────
+  window.addEventListener('scroll',()=>{
+    document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60);
+  });
+
+  // ── HERO SCENE ──────────────────────────────────────────────────
+  (function(){
+    const container = document.getElementById('hero');
+    const canvas = document.getElementById('hero-canvas');
+    const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+
+    let W = container.clientWidth, H = container.clientHeight;
+    renderer.setSize(W,H);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0c0c0e);
+    scene.fog = new THREE.FogExp2(0x0c0c0e, 0.04);
+
+    const camera = new THREE.PerspectiveCamera(42, W/H, .1, 200);
+    camera.position.set(5, 2.5, 11);
+    camera.lookAt(0, 0, 0);
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0x1a1230, 1.5));
+    const key = new THREE.DirectionalLight(0xffffff, 1.8);
+    key.position.set(8,12,6); key.castShadow = true;
+    key.shadow.mapSize.width = 2048; key.shadow.mapSize.height = 2048;
+    scene.add(key);
+    const fill1 = new THREE.PointLight(0xa88dff, 4, 18);
+    fill1.position.set(-6, 3, 3); scene.add(fill1);
+    const fill2 = new THREE.PointLight(0x7edcff, 2, 14);
+    fill2.position.set(6, -3, -4); scene.add(fill2);
+    const fill3 = new THREE.PointLight(0xff9d7e, 2.5, 12);
+    fill3.position.set(3, -5, 6); scene.add(fill3);
+
+    // Materials
+    const matWhite = new THREE.MeshStandardMaterial({color:0xf0eeff, roughness:.08, metalness:.6});
+    const matPurple = new THREE.MeshStandardMaterial({color:0xa88dff, roughness:.15, metalness:.7, emissive:0xa88dff, emissiveIntensity:.05});
+    const matDark = new THREE.MeshStandardMaterial({color:0x1a1828, roughness:.3, metalness:.8});
+    const matWire = new THREE.MeshBasicMaterial({color:0x2a2040, wireframe:true});
+    const matOrange = new THREE.MeshStandardMaterial({color:0xff9d7e, roughness:.2, metalness:.5});
+    const matCyan = new THREE.MeshStandardMaterial({color:0x7edcff, roughness:.2, metalness:.5});
+
+    // Main group
+    const mainGroup = new THREE.Group();
+    scene.add(mainGroup);
+
+    // Central icosahedron
+    const icoGeo = new THREE.IcosahedronGeometry(1.6, 0);
+    const ico = new THREE.Mesh(icoGeo, matWhite);
+    ico.castShadow = true;
+    mainGroup.add(ico);
+
+    // Wireframe overlay
+    const icoWire = new THREE.Mesh(new THREE.IcosahedronGeometry(1.65, 1), matWire);
+    mainGroup.add(icoWire);
+
+    // Orbit ring 1
+    const ring1 = new THREE.Mesh(
+      new THREE.TorusGeometry(2.8, 0.035, 8, 120), matPurple
+    );
+    ring1.rotation.x = Math.PI * .35;
+    mainGroup.add(ring1);
+
+    // Orbit ring 2
+    const ring2 = new THREE.Mesh(
+      new THREE.TorusGeometry(3.4, 0.025, 8, 120), matCyan
+    );
+    ring2.rotation.set(Math.PI*.6, Math.PI*.2, 0);
+    mainGroup.add(ring2);
+
+    // Orbit ring 3
+    const ring3 = new THREE.Mesh(
+      new THREE.TorusGeometry(2.2, 0.02, 8, 80), matOrange
+    );
+    ring3.rotation.set(0, Math.PI*.4, Math.PI*.5);
+    mainGroup.add(ring3);
+
+    // Satellites
+    const sats = [];
+    const satData = [
+      {geo: new THREE.OctahedronGeometry(.22), mat: matPurple, orbit: ring1, angle: 0, speed: 1.2},
+      {geo: new THREE.TetrahedronGeometry(.18), mat: matOrange, orbit: ring1, angle: Math.PI, speed: 1.2},
+      {geo: new THREE.SphereGeometry(.16,16,16), mat: matCyan, orbit: ring2, angle: Math.PI*.5, speed: .8},
+      {geo: new THREE.BoxGeometry(.22,.22,.22), mat: matWhite, orbit: ring2, angle: Math.PI*1.5, speed: .8},
+      {geo: new THREE.IcosahedronGeometry(.14,0), mat: matDark, orbit: ring3, angle: Math.PI*.25, speed: 1.5},
+    ];
+    satData.forEach(d=>{
+      const mesh = new THREE.Mesh(d.geo, d.mat);
+      mesh.castShadow = true;
+      mesh.userData = d;
+      scene.add(mesh);
+      sats.push(mesh);
     });
-    function animateCursor() {
-      rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12;
-      ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
-      requestAnimationFrame(animateCursor);
+
+    // Floating particles
+    const ptGeo = new THREE.BufferGeometry();
+    const ptCount = 180;
+    const ptPos = new Float32Array(ptCount*3);
+    const ptVel = [];
+    for(let i=0;i<ptCount;i++){
+      const theta = Math.random()*Math.PI*2;
+      const phi = Math.random()*Math.PI;
+      const r = 4 + Math.random()*8;
+      ptPos[i*3] = r*Math.sin(phi)*Math.cos(theta);
+      ptPos[i*3+1] = r*Math.sin(phi)*Math.sin(theta);
+      ptPos[i*3+2] = r*Math.cos(phi);
+      ptVel.push({x:(Math.random()-.5)*.004, y:(Math.random()-.5)*.004, z:(Math.random()-.5)*.003});
     }
-    animateCursor();
-    document.querySelectorAll('button, a, .card').forEach(el => {
-      el.addEventListener('mouseenter', () => { ring.style.transform = 'translate(-50%,-50%) scale(2)'; ring.style.opacity = '0.2'; });
-      el.addEventListener('mouseleave', () => { ring.style.transform = 'translate(-50%,-50%) scale(1)'; ring.style.opacity = '0.5'; });
+    ptGeo.setAttribute('position', new THREE.BufferAttribute(ptPos,3));
+    const ptMat = new THREE.PointsMaterial({color:0x6040b0, size:.04, transparent:true, opacity:.5});
+    const points = new THREE.Points(ptGeo, ptMat);
+    scene.add(points);
+
+    // Shadow plane
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(50,50),
+      new THREE.ShadowMaterial({opacity:.15})
+    );
+    plane.rotation.x = -Math.PI/2; plane.position.y = -3; plane.receiveShadow = true;
+    scene.add(plane);
+
+    let mouse = {x:0,y:0}, targetRot = {x:0,y:0};
+    document.addEventListener('mousemove',e=>{
+      const r = container.getBoundingClientRect();
+      mouse.x = ((e.clientX-r.left)/r.width-.5)*2;
+      mouse.y = -((e.clientY-r.top)/r.height-.5)*2;
     });
 
-    // ─── HERO THREE.JS SCENE ─────────────────────────────────
-    (function() {
-      const container = document.getElementById('canvas-container');
-      const canvas = document.getElementById('three-canvas');
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.shadowMap.enabled = true;
+    let clk=0;
+    (function tick(){
+      requestAnimationFrame(tick); clk+=.007;
+      targetRot.y += (mouse.x*.5-targetRot.y)*.04;
+      targetRot.x += (mouse.y*.25-targetRot.x)*.04;
+      mainGroup.rotation.y = clk*.25 + targetRot.y;
+      mainGroup.rotation.x = Math.sin(clk*.4)*.08 + targetRot.x;
+      ico.rotation.y = clk*.5;
+      ico.rotation.z = clk*.3;
+      icoWire.rotation.y = -clk*.3;
+      ring1.rotation.z = clk*.4;
+      ring2.rotation.z = -clk*.3;
+      ring3.rotation.x = clk*.5;
 
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xf8f7f4);
-
-      let W = container.clientWidth, H = container.clientHeight;
-      renderer.setSize(W, H);
-
-      const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
-      camera.position.set(4, 2, 9);
-      camera.lookAt(0, 0, 0);
-
-      scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-      const dir = new THREE.DirectionalLight(0xffffff, 1.2);
-      dir.position.set(5, 10, 5); dir.castShadow = true;
-      scene.add(dir);
-      const fill = new THREE.DirectionalLight(0xd0c8ff, 0.5);
-      fill.position.set(-5, 2, -5); scene.add(fill);
-
-      const group = new THREE.Group();
-      scene.add(group);
-
-      const matW = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.05 });
-      const matP = new THREE.MeshStandardMaterial({ color: 0x6b5ce7, roughness: 0.3, metalness: 0.1 });
-      const matG = new THREE.MeshStandardMaterial({ color: 0xe8e6f0, roughness: 0.4 });
-      const matD = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.3, metalness: 0.2 });
-
-      const box = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 1.4), matW);
-      box.castShadow = true; box.position.set(0, 0.2, 0);
-      group.add(box);
-
-      const t1 = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.06, 16, 60), matP);
-      t1.rotation.x = Math.PI / 2; t1.position.set(0, 0.2, 0);
-      group.add(t1);
-
-      const t2 = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.04, 16, 60), matG);
-      t2.rotation.set(Math.PI/3, Math.PI/5, 0); t2.position.set(0, 0.2, 0);
-      group.add(t2);
-
-      const s1 = new THREE.Mesh(new THREE.SphereGeometry(0.2, 32, 32), matP);
-      s1.position.set(2.2, 1.0, 0.5); group.add(s1);
-      const s2 = new THREE.Mesh(new THREE.SphereGeometry(0.12, 32, 32), matD);
-      s2.position.set(-2.0, -0.5, 1.0); group.add(s2);
-      const s3 = new THREE.Mesh(new THREE.SphereGeometry(0.15, 32, 32), matG);
-      s3.position.set(1.5, -1.2, -0.5); group.add(s3);
-
-      const shadow = new THREE.Mesh(new THREE.PlaneGeometry(30,30), new THREE.ShadowMaterial({ opacity: 0.07 }));
-      shadow.rotation.x = -Math.PI/2; shadow.position.y = -1.4; shadow.receiveShadow = true;
-      scene.add(shadow);
-
-      const particles = [];
-      for (let i = 0; i < 50; i++) {
-        const m = new THREE.Mesh(
-          new THREE.SphereGeometry(0.015 + Math.random()*0.025, 8, 8),
-          new THREE.MeshStandardMaterial({ color: Math.random()>0.5 ? 0x6b5ce7 : 0xcccccc })
+      // Satellites orbiting
+      sats.forEach(s=>{
+        const d = s.userData;
+        d.angle += .008 * d.speed;
+        const r = d.orbit.geometry.parameters.radius;
+        const rx2 = d.orbit.rotation.x, ry2 = d.orbit.rotation.y, rz2 = d.orbit.rotation.z;
+        const lx = Math.cos(d.angle)*r;
+        const ly = Math.sin(d.angle)*r*.3;
+        const lz = Math.sin(d.angle)*r;
+        // Transform by parent (mainGroup) rotation
+        const worldX = mainGroup.position.x + lx*Math.cos(mainGroup.rotation.y) - lz*Math.sin(mainGroup.rotation.y);
+        const worldZ = mainGroup.position.z + lx*Math.sin(mainGroup.rotation.y) + lz*Math.cos(mainGroup.rotation.y);
+        s.position.set(
+          worldX,
+          ly + Math.sin(clk*.8 + d.angle)*.2,
+          worldZ
         );
-        m.position.set((Math.random()-0.5)*12,(Math.random()-0.5)*6,(Math.random()-0.5)*4-2);
-        m.userData = { vx:(Math.random()-0.5)*0.002, vy:(Math.random()-0.5)*0.002 };
-        scene.add(m); particles.push(m);
+        s.rotation.y = clk*.8;
+        s.rotation.x = clk*.5;
+      });
+
+      // Particle drift
+      const pa = ptGeo.attributes.position.array;
+      for(let i=0;i<ptCount;i++){
+        pa[i*3] += ptVel[i].x;
+        pa[i*3+1] += ptVel[i].y;
+        pa[i*3+2] += ptVel[i].z;
+        const d2 = Math.sqrt(pa[i*3]**2+pa[i*3+1]**2+pa[i*3+2]**2);
+        if(d2>12){
+          pa[i*3]*=.5; pa[i*3+1]*=.5; pa[i*3+2]*=.5;
+        }
       }
+      ptGeo.attributes.position.needsUpdate = true;
 
-      let mouse = { x:0, y:0 }, targetRot = { x:0, y:0 };
-      document.addEventListener('mousemove', e => {
-        const r = container.getBoundingClientRect();
-        mouse.x = ((e.clientX-r.left)/r.width - 0.5) * 2;
-        mouse.y = -((e.clientY-r.top)/r.height - 0.5) * 2;
-      });
+      // Light pulsing
+      fill1.intensity = 4 + Math.sin(clk*1.3)*1;
+      fill3.intensity = 2.5 + Math.cos(clk*.9)*.8;
 
-      let clk = 0;
-      (function tick() {
-        requestAnimationFrame(tick); clk += 0.008;
-        targetRot.y += (mouse.x*0.6 - targetRot.y)*0.05;
-        targetRot.x += (mouse.y*0.3 - targetRot.x)*0.05;
-        group.rotation.y = clk*0.3 + targetRot.y;
-        group.rotation.x = Math.sin(clk*0.5)*0.1 + targetRot.x;
-        box.position.y = 0.2 + Math.sin(clk*0.8)*0.12;
-        t1.rotation.z = clk*0.5; t2.rotation.z = -clk*0.3;
-        s1.position.y = 1.0 + Math.sin(clk*1.2)*0.2;
-        s2.position.y = -0.5 + Math.cos(clk*0.9)*0.15;
-        particles.forEach(p => {
-          p.position.x += p.userData.vx; p.position.y += p.userData.vy;
-          if(p.position.x>6) p.position.x=-6; if(p.position.x<-6) p.position.x=6;
-          if(p.position.y>3) p.position.y=-3; if(p.position.y<-3) p.position.y=3;
-        });
-        renderer.render(scene, camera);
-      })();
-
-      window.addEventListener('resize', () => {
-        W = container.clientWidth; H = container.clientHeight;
-        camera.aspect = W/H; camera.updateProjectionMatrix();
-        renderer.setSize(W, H);
-      });
+      renderer.render(scene, camera);
     })();
 
-    // ─── SHOWCASE THREE.JS SCENE ─────────────────────────────
-    (function() {
-      const el = document.getElementById('showcase-canvas');
-      const parent = el.parentElement;
-      const renderer = new THREE.WebGLRenderer({ canvas: el, antialias: true });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.setClearColor(0x1a1a1a);
+    window.addEventListener('resize',()=>{
+      W=container.clientWidth; H=container.clientHeight;
+      camera.aspect=W/H; camera.updateProjectionMatrix();
+      renderer.setSize(W,H);
+    });
+  })();
 
-      const W = parent.clientWidth, H = parent.clientHeight;
-      renderer.setSize(W, H);
+  // ── SHOWCASE SCENE ──────────────────────────────────────────────
+  (function(){
+    const el = document.getElementById('showcase-canvas');
+    const parent = el.parentElement;
+    const renderer = new THREE.WebGLRenderer({canvas:el, antialias:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.setClearColor(0x0a090d);
 
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(50, W/H, 0.1, 100);
-      camera.position.set(0, 0, 5);
+    const W = parent.clientWidth, H = parent.clientHeight;
+    renderer.setSize(W,H);
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50,W/H,.1,100);
+    camera.position.set(0,0,6);
 
-      scene.add(new THREE.AmbientLight(0x6b5ce7, 0.5));
-      const pt = new THREE.PointLight(0x6b5ce7, 2, 10);
-      pt.position.set(2, 2, 2); scene.add(pt);
-      const pt2 = new THREE.PointLight(0xffffff, 1, 10);
-      pt2.position.set(-2, -2, 2); scene.add(pt2);
+    scene.add(new THREE.AmbientLight(0x0a0814, 2));
+    const p1 = new THREE.PointLight(0xa88dff, 8, 15);
+    p1.position.set(3,3,3); scene.add(p1);
+    const p2 = new THREE.PointLight(0x7edcff, 4, 12);
+    p2.position.set(-3,-2,2); scene.add(p2);
+    const p3 = new THREE.PointLight(0xff9d7e, 3, 10);
+    p3.position.set(0,-4,1); scene.add(p3);
 
-      const group = new THREE.Group();
-      scene.add(group);
+    const group = new THREE.Group();
+    scene.add(group);
 
-      const icoMat = new THREE.MeshStandardMaterial({ color: 0xffffff, wireframe: true, opacity: 0.15, transparent: true });
-      const ico = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 1), icoMat);
-      group.add(ico);
+    // Knot
+    const knotMat = new THREE.MeshStandardMaterial({
+      color: 0xa88dff, roughness:.05, metalness:.9,
+      emissive: 0x3a1a80, emissiveIntensity:.3
+    });
+    const knot = new THREE.Mesh(new THREE.TorusKnotGeometry(1.2,.28,180,20,2,3), knotMat);
+    group.add(knot);
 
-      const solidMat = new THREE.MeshStandardMaterial({ color: 0x6b5ce7, roughness: 0.1, metalness: 0.8 });
-      const solid = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 0), solidMat);
-      group.add(solid);
+    // Surrounding tori
+    const toriMat = new THREE.MeshStandardMaterial({color:0x7edcff, roughness:.2, metalness:.6, transparent:true, opacity:.5});
+    const t1 = new THREE.Mesh(new THREE.TorusGeometry(2.5,.03,8,120), toriMat);
+    t1.rotation.x = Math.PI/4; scene.add(t1);
+    const t2 = new THREE.Mesh(new THREE.TorusGeometry(3,.02,8,120), new THREE.MeshStandardMaterial({color:0xff9d7e,roughness:.2,metalness:.5,transparent:true,opacity:.35}));
+    t2.rotation.set(Math.PI/3,Math.PI/5,0); scene.add(t2);
 
-      const ringMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
-      const ring1 = new THREE.Mesh(new THREE.TorusGeometry(2.0, 0.03, 8, 80), ringMat);
-      ring1.rotation.x = Math.PI/3; scene.add(ring1);
-      const ring2 = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.02, 8, 80), ringMat);
-      ring2.rotation.y = Math.PI/4; scene.add(ring2);
+    // Scatter dots
+    for(let i=0;i<50;i++){
+      const m = new THREE.Mesh(
+        new THREE.SphereGeometry(.025,8,8),
+        new THREE.MeshStandardMaterial({
+          color: [0xa88dff,0x7edcff,0xff9d7e][Math.floor(Math.random()*3)],
+          emissive: [0xa88dff,0x7edcff,0xff9d7e][Math.floor(Math.random()*3)],
+          emissiveIntensity:.5
+        })
+      );
+      m.position.set((Math.random()-.5)*8,(Math.random()-.5)*6,(Math.random()-.5)*3-2);
+      m.userData = {vx:(Math.random()-.5)*.003, vy:(Math.random()-.5)*.003};
+      scene.add(m);
+    }
 
-      let clk = 0;
-      (function tick() {
-        requestAnimationFrame(tick); clk += 0.01;
-        group.rotation.y = clk * 0.4;
-        group.rotation.x = Math.sin(clk * 0.3) * 0.2;
-        ring1.rotation.z = clk * 0.2;
-        ring2.rotation.x = clk * 0.15;
-        pt.position.x = Math.cos(clk) * 3;
-        pt.position.y = Math.sin(clk * 0.7) * 2;
-        renderer.render(scene, camera);
-      })();
+    let clk=0;
+    (function tick(){
+      requestAnimationFrame(tick); clk+=.012;
+      group.rotation.y = clk*.4;
+      group.rotation.x = Math.sin(clk*.3)*.3;
+      knot.rotation.z = clk*.1;
+      t1.rotation.z = clk*.15;
+      t2.rotation.x = clk*.1;
+      p1.position.set(Math.cos(clk)*4, Math.sin(clk*.7)*3, 3);
+      p2.position.set(Math.cos(clk*1.3+2)*3, Math.sin(clk*.5)*2, 2);
+      renderer.render(scene,camera);
     })();
+  })();
+
+  // ── TORUS KNOT SCENE (middle section) ───────────────────────────
+  (function(){
+    const wrap = document.getElementById('torus-canvas-wrap');
+    const canvas = document.getElementById('torus-canvas');
+    const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.4;
+    renderer.setClearColor(0x000000, 0);
+
+    const W = wrap.clientWidth, H = wrap.clientHeight;
+    renderer.setSize(W,H);
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(55,W/H,.1,100);
+    camera.position.set(0,0,8);
+
+    scene.add(new THREE.AmbientLight(0x0a0814,1));
+    const pl1 = new THREE.PointLight(0xa88dff,12,20);
+    pl1.position.set(5,5,3); scene.add(pl1);
+    const pl2 = new THREE.PointLight(0xff9d7e,6,15);
+    pl2.position.set(-5,-4,4); scene.add(pl2);
+    const pl3 = new THREE.PointLight(0x7edcff,5,15);
+    pl3.position.set(0,5,-3); scene.add(pl3);
+
+    // Giant torus knot
+    const bigKnot = new THREE.Mesh(
+      new THREE.TorusKnotGeometry(2,.4,256,32,3,5),
+      new THREE.MeshStandardMaterial({
+        color:0x1a1228, roughness:.05, metalness:.95,
+        emissive:0x4a20a0, emissiveIntensity:.15
+      })
+    );
+    scene.add(bigKnot);
+
+    // Outer cage
+    const cageKnot = new THREE.Mesh(
+      new THREE.TorusKnotGeometry(2.2,.08,128,12,3,5),
+      new THREE.MeshStandardMaterial({
+        color:0xa88dff, roughness:.1, metalness:.8,
+        transparent:true, opacity:.4,
+        emissive:0xa88dff, emissiveIntensity:.2
+      })
+    );
+    scene.add(cageKnot);
+
+    // Accent knot 2
+    const accentKnot = new THREE.Mesh(
+      new THREE.TorusKnotGeometry(1.5,.12,128,12,2,7),
+      new THREE.MeshStandardMaterial({
+        color:0xff9d7e, roughness:.1, metalness:.7,
+        transparent:true, opacity:.5,
+        emissive:0xff9d7e, emissiveIntensity:.15
+      })
+    );
+    scene.add(accentKnot);
+
+    // DNA-like double helix via line
+    const helixPts1=[], helixPts2=[];
+    for(let i=0;i<200;i++){
+      const t = (i/200)*Math.PI*8;
+      const r = 3.5;
+      helixPts1.push(new THREE.Vector3(Math.cos(t)*r, (i/200)*12-6, Math.sin(t)*r));
+      helixPts2.push(new THREE.Vector3(Math.cos(t+Math.PI)*r, (i/200)*12-6, Math.sin(t+Math.PI)*r));
+    }
+    const h1 = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(helixPts1),
+      new THREE.LineBasicMaterial({color:0x3a2060, opacity:.4, transparent:true})
+    );
+    const h2 = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(helixPts2),
+      new THREE.LineBasicMaterial({color:0x3a2060, opacity:.4, transparent:true})
+    );
+    scene.add(h1,h2);
+
+    // Grid floor
+    const grid = new THREE.GridHelper(30,30,0x1a1430,0x1a1430);
+    grid.position.y=-5; grid.material.opacity=.3; grid.material.transparent=true;
+    scene.add(grid);
+
+    // Floating orbiting spheres
+    const orbiters=[];
+    const orbitData=[
+      {r:4,speed:1,phase:0,size:.18,color:0xa88dff},
+      {r:5,speed:.7,phase:2,size:.14,color:0x7edcff},
+      {r:3.5,speed:1.3,phase:4,size:.12,color:0xff9d7e},
+      {r:5.5,speed:.5,phase:1,size:.1,color:0xffffff},
+      {r:4.5,speed:1.1,phase:3,size:.09,color:0xa88dff},
+    ];
+    orbitData.forEach(d=>{
+      const m = new THREE.Mesh(
+        new THREE.SphereGeometry(d.size,16,16),
+        new THREE.MeshStandardMaterial({
+          color:d.color, emissive:d.color, emissiveIntensity:.8,
+          roughness:.1, metalness:.5
+        })
+      );
+      orbiters.push({mesh:m,...d});
+      scene.add(m);
+    });
+
+    let clk=0, mx=0, my=0, tx=0, ty=0;
+    document.addEventListener('mousemove',e=>{
+      mx=(e.clientX/window.innerWidth-.5)*2;
+      my=-(e.clientY/window.innerHeight-.5)*2;
+    });
+
+    (function tick(){
+      requestAnimationFrame(tick); clk+=.008;
+      tx+=(mx*.4-tx)*.03; ty+=(my*.2-ty)*.03;
+      bigKnot.rotation.y=clk*.25+tx;
+      bigKnot.rotation.x=Math.sin(clk*.3)*.1+ty;
+      cageKnot.rotation.y=-clk*.3+tx*.8;
+      cageKnot.rotation.z=clk*.2;
+      accentKnot.rotation.y=clk*.4;
+      accentKnot.rotation.z=-clk*.3;
+      h1.rotation.y=clk*.1; h2.rotation.y=clk*.1;
+      orbiters.forEach(o=>{
+        const a = clk*o.speed+o.phase;
+        o.mesh.position.set(Math.cos(a)*o.r, Math.sin(a*1.3)*1.5, Math.sin(a)*o.r);
+        o.mesh.rotation.y=clk*2;
+      });
+      pl1.position.set(Math.cos(clk*.7)*6,Math.sin(clk*.5)*4,3);
+      pl2.position.set(Math.cos(clk*.4+2)*5,Math.sin(clk*.6+1)*3,4);
+      renderer.render(scene,camera);
+    })();
+  })();
   </script>
 </body>
 </html>
