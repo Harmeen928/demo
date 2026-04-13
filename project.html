@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FORMA — 3D Business Website</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { background: #f8f7f4; font-family: 'Georgia', serif; overflow-x: hidden; cursor: none; }
+
+    /* Custom Cursor */
+    .mouse-dot {
+      width: 8px; height: 8px;
+      background: #6b5ce7; border-radius: 50%;
+      position: fixed; pointer-events: none;
+      z-index: 9999; transform: translate(-50%, -50%);
+      transition: transform 0.1s; mix-blend-mode: multiply;
+    }
+    .mouse-ring {
+      width: 32px; height: 32px;
+      border: 1px solid #6b5ce7; border-radius: 50%;
+      position: fixed; pointer-events: none; z-index: 9998;
+      transform: translate(-50%, -50%);
+      transition: all 0.15s ease; opacity: 0.5;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed; top: 0; left: 0; width: 100%;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 24px 8%; z-index: 100;
+      background: rgba(248,247,244,0.85); backdrop-filter: blur(12px);
+      border-bottom: 0.5px solid rgba(0,0,0,0.06);
+    }
+    .logo { font-size: 20px; font-weight: 400; color: #1a1a1a; letter-spacing: 2px; }
+    .nav-links { display: flex; gap: 36px; list-style: none; }
+    .nav-links a {
+      font-size: 13px; color: #555; text-decoration: none;
+      font-family: 'Helvetica Neue', sans-serif; letter-spacing: 0.5px; transition: color 0.2s;
+    }
+    .nav-links a:hover { color: #6b5ce7; }
+    .nav-cta {
+      background: #1a1a1a; color: #fff; border: none;
+      padding: 10px 24px; font-size: 13px; letter-spacing: 1px;
+      cursor: none; font-family: 'Helvetica Neue', sans-serif; transition: all 0.3s;
+    }
+    .nav-cta:hover { background: #6b5ce7; }
+
+    /* HERO */
+    #canvas-container { position: relative; width: 100%; height: 100vh; min-height: 600px; }
+    #three-canvas { display: block; width: 100%; height: 100%; }
+    .overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; display: flex; flex-direction: column;
+      justify-content: center; align-items: flex-start; padding: 0 8%; padding-top: 80px;
+    }
+    .tag {
+      font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+      color: #888; margin-bottom: 16px; pointer-events: auto;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .tag::before { content: ''; width: 24px; height: 1px; background: #6b5ce7; display: block; }
+    .hero-title {
+      font-size: clamp(40px, 6vw, 80px); font-weight: 400; color: #1a1a1a;
+      line-height: 1.05; margin-bottom: 24px; max-width: 620px; pointer-events: auto;
+    }
+    .hero-title em { font-style: italic; color: #6b5ce7; }
+    .hero-sub {
+      font-size: 16px; color: #666; max-width: 400px; line-height: 1.8;
+      margin-bottom: 40px; font-family: 'Helvetica Neue', sans-serif; pointer-events: auto;
+    }
+    .btn-group { display: flex; gap: 12px; pointer-events: auto; }
+    .btn-primary {
+      background: #1a1a1a; color: #fff; border: none;
+      padding: 15px 36px; font-size: 13px; letter-spacing: 1.5px;
+      cursor: none; font-family: 'Helvetica Neue', sans-serif; transition: all 0.3s;
+    }
+    .btn-primary:hover { background: #6b5ce7; transform: translateY(-2px); }
+    .btn-outline {
+      background: transparent; color: #1a1a1a; border: 1px solid #1a1a1a;
+      padding: 15px 36px; font-size: 13px; letter-spacing: 1.5px;
+      cursor: none; font-family: 'Helvetica Neue', sans-serif; transition: all 0.3s;
+    }
+    .btn-outline:hover { background: #f0eeff; border-color: #6b5ce7; color: #6b5ce7; }
+    .scroll-hint {
+      position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      font-size: 10px; letter-spacing: 3px; color: #aaa;
+      font-family: 'Helvetica Neue', sans-serif; pointer-events: none;
+    }
+    .scroll-line {
+      width: 1px; height: 44px;
+      background: linear-gradient(to bottom, #6b5ce7, transparent);
+      animation: scrollAnim 2s ease-in-out infinite;
+    }
+    @keyframes scrollAnim {
+      0%,100%{ opacity:0.3; transform:scaleY(0.4) translateY(-8px); }
+      50%{ opacity:1; transform:scaleY(1) translateY(0); }
+    }
+
+    /* MARQUEE */
+    .marquee-strip {
+      background: #6b5ce7; padding: 14px 0; overflow: hidden; white-space: nowrap;
+    }
+    .marquee-track { display: inline-flex; animation: marquee 18s linear infinite; }
+    .marquee-item {
+      font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: #fff;
+      font-family: 'Helvetica Neue', sans-serif; padding: 0 40px; opacity: 0.85;
+    }
+    .marquee-dot { color: rgba(255,255,255,0.4); padding: 0 8px; }
+    @keyframes marquee { 0%{ transform: translateX(0); } 100%{ transform: translateX(-50%); } }
+
+    /* FEATURES */
+    .features { background: #fff; padding: 110px 8%; }
+    .section-label {
+      font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+      color: #6b5ce7; margin-bottom: 12px; font-family: 'Helvetica Neue', sans-serif;
+    }
+    .section-title {
+      font-size: clamp(30px, 4vw, 52px); color: #1a1a1a; font-weight: 400;
+      margin-bottom: 64px; max-width: 500px; line-height: 1.15;
+    }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 2px; }
+    .card {
+      background: #f8f7f4; padding: 44px 32px; transition: all 0.45s;
+      cursor: none; position: relative; overflow: hidden;
+    }
+    .card::before {
+      content: ''; position: absolute; inset: 0; background: #6b5ce7;
+      transform: scaleY(0); transform-origin: bottom;
+      transition: transform 0.45s cubic-bezier(0.23,1,0.32,1); z-index: 0;
+    }
+    .card:hover::before { transform: scaleY(1); }
+    .card:hover .card-num, .card:hover .card-title, .card:hover .card-text { color: #fff; }
+    .card-num {
+      font-size: 11px; letter-spacing: 3px; color: #ccc; margin-bottom: 44px;
+      font-family: 'Helvetica Neue', sans-serif; position: relative; z-index: 1; transition: color 0.4s;
+    }
+    .card-icon { font-size: 26px; margin-bottom: 18px; position: relative; z-index: 1; }
+    .card-title {
+      font-size: 20px; color: #1a1a1a; margin-bottom: 12px; font-weight: 400;
+      position: relative; z-index: 1; transition: color 0.4s;
+    }
+    .card-text {
+      font-size: 13px; color: #999; line-height: 1.8;
+      font-family: 'Helvetica Neue', sans-serif; position: relative; z-index: 1; transition: color 0.4s;
+    }
+
+    /* SHOWCASE */
+    .showcase {
+      background: #f8f7f4; padding: 110px 8%;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center;
+    }
+    @media(max-width: 768px){ .showcase{ grid-template-columns: 1fr; } }
+    .showcase-visual {
+      height: 420px; background: #1a1a1a; position: relative; overflow: hidden;
+    }
+    #showcase-canvas { width: 100%; height: 100%; display: block; }
+    .showcase-content {}
+    .showcase-content .section-label { margin-bottom: 16px; }
+    .showcase-content h2 {
+      font-size: clamp(28px, 3.5vw, 44px); color: #1a1a1a; font-weight: 400;
+      line-height: 1.2; margin-bottom: 24px;
+    }
+    .showcase-content p {
+      font-size: 14px; color: #777; line-height: 1.9;
+      font-family: 'Helvetica Neue', sans-serif; margin-bottom: 36px;
+    }
+    .feature-list { list-style: none; }
+    .feature-list li {
+      font-size: 13px; color: #555; font-family: 'Helvetica Neue', sans-serif;
+      padding: 10px 0; border-bottom: 0.5px solid #eee;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .feature-list li::before { content: ''; width: 6px; height: 6px; background: #6b5ce7; border-radius: 50%; flex-shrink: 0; }
+
+    /* STATS */
+    .stats {
+      background: #1a1a1a; padding: 80px 8%;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 40px;
+    }
+    .stat { text-align: center; }
+    .stat-num { font-size: clamp(40px, 5vw, 60px); color: #fff; font-weight: 400; line-height: 1; }
+    .stat-num span { color: #6b5ce7; }
+    .stat-label {
+      font-size: 11px; letter-spacing: 2.5px; color: #555; text-transform: uppercase;
+      margin-top: 10px; font-family: 'Helvetica Neue', sans-serif;
+    }
+
+    /* TESTIMONIAL */
+    .testimonials { background: #fff; padding: 110px 8%; }
+    .t-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2px; margin-top: 60px; }
+    .t-card { background: #f8f7f4; padding: 40px 32px; }
+    .t-quote { font-size: 15px; color: #333; line-height: 1.8; margin-bottom: 28px; font-style: italic; }
+    .t-author { display: flex; align-items: center; gap: 12px; }
+    .t-avatar {
+      width: 40px; height: 40px; border-radius: 50%; background: #6b5ce7;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 500; color: #fff; font-family: 'Helvetica Neue', sans-serif;
+    }
+    .t-name { font-size: 13px; font-weight: 500; color: #1a1a1a; font-family: 'Helvetica Neue', sans-serif; }
+    .t-role { font-size: 12px; color: #aaa; font-family: 'Helvetica Neue', sans-serif; }
+
+    /* CTA */
+    .cta { background: #6b5ce7; padding: 110px 8%; text-align: center; }
+    .cta-title { font-size: clamp(36px, 5vw, 68px); color: #fff; font-weight: 400; margin-bottom: 20px; }
+    .cta-sub { font-size: 16px; color: rgba(255,255,255,0.65); margin-bottom: 44px; font-family: 'Helvetica Neue', sans-serif; }
+    .btn-white {
+      background: #fff; color: #6b5ce7; border: none;
+      padding: 16px 52px; font-size: 14px; letter-spacing: 1.5px;
+      cursor: none; font-family: 'Helvetica Neue', sans-serif; transition: all 0.3s;
+    }
+    .btn-white:hover { background: #1a1a1a; color: #fff; transform: translateY(-2px); }
+
+    /* FOOTER */
+    footer {
+      background: #1a1a1a; padding: 60px 8%;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 20px;
+    }
+    .footer-logo { font-size: 18px; color: #fff; letter-spacing: 2px; }
+    .footer-links { display: flex; gap: 28px; list-style: none; }
+    .footer-links a { font-size: 12px; color: #555; text-decoration: none; font-family: 'Helvetica Neue', sans-serif; transition: color 0.2s; }
+    .footer-links a:hover { color: #6b5ce7; }
+    .footer-copy { font-size: 12px; color: #444; font-family: 'Helvetica Neue', sans-serif; }
+  </style>
+</head>
+<body>
+
+  <div class="mouse-dot" id="cursor"></div>
+  <div class="mouse-ring" id="ring"></div>
+
+  <!-- NAV -->
+  <nav>
+    <div class="logo">FORMA</div>
+    <ul class="nav-links">
+      <li><a href="#features">Product</a></li>
+      <li><a href="#showcase">Solutions</a></li>
+      <li><a href="#stats">About</a></li>
+      <li><a href="#testimonials">Clients</a></li>
+    </ul>
+    <button class="nav-cta">Get Started</button>
+  </nav>
+
+  <!-- HERO -->
+  <div id="canvas-container">
+    <canvas id="three-canvas"></canvas>
+    <div class="overlay">
+      <div class="tag">Next-gen platform</div>
+      <h1 class="hero-title">Build products<br>that <em>matter</em></h1>
+      <p class="hero-sub">A powerful business suite designed for teams who move fast and think clearly. Beautifully engineered.</p>
+      <div class="btn-group">
+        <button class="btn-primary">Get Started</button>
+        <button class="btn-outline">Watch Demo</button>
+      </div>
+    </div>
+    <div class="scroll-hint">
+      <div class="scroll-line"></div>
+      SCROLL
+    </div>
+  </div>
+
+  <!-- MARQUEE -->
+  <div class="marquee-strip">
+    <div class="marquee-track" id="marquee">
+      <span class="marquee-item">Product Design <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">Business Solutions <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">Real-time Analytics <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">Enterprise Ready <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">Scalable Infrastructure <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">Smart Automation <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">Product Design <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">Business Solutions <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">Real-time Analytics <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">Enterprise Ready <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">Scalable Infrastructure <span class="marquee-dot">◆</span></span>
+      <span class="marquee-item">Smart Automation <span class="marquee-dot">◆</span></span>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <section class="features" id="features">
+    <div class="section-label">Why choose Forma</div>
+    <h2 class="section-title">Everything your team needs, nothing it doesn't.</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="card-num">01</div>
+        <div class="card-icon">◈</div>
+        <div class="card-title">Modular Design</div>
+        <div class="card-text">Plug-and-play components that adapt to your workflow without friction or compromise.</div>
+      </div>
+      <div class="card">
+        <div class="card-num">02</div>
+        <div class="card-icon">⬡</div>
+        <div class="card-title">Real-time Sync</div>
+        <div class="card-text">All data, all devices, always in sync. Zero lag, zero compromise on performance.</div>
+      </div>
+      <div class="card">
+        <div class="card-num">03</div>
+        <div class="card-icon">◉</div>
+        <div class="card-title">Smart Analytics</div>
+        <div class="card-text">Deep insights surfaced automatically so you decide faster, better, with confidence.</div>
+      </div>
+      <div class="card">
+        <div class="card-num">04</div>
+        <div class="card-icon">⬢</div>
+        <div class="card-title">Enterprise Ready</div>
+        <div class="card-text">Security, compliance, and scale baked in from day one. Built for the long run.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SHOWCASE -->
+  <section class="showcase" id="showcase">
+    <div class="showcase-visual">
+      <canvas id="showcase-canvas"></canvas>
+    </div>
+    <div class="showcase-content">
+      <div class="section-label">How it works</div>
+      <h2>Designed for the way teams actually work</h2>
+      <p>Forma adapts to your existing processes rather than forcing you into rigid structures. Flexible, powerful, and intuitive from day one.</p>
+      <ul class="feature-list">
+        <li>One-click onboarding for any team size</li>
+        <li>Integrates with 200+ tools you already use</li>
+        <li>Automated workflows that save 12 hrs/week</li>
+        <li>Role-based permissions and audit logs</li>
+        <li>24/7 support with 2-hour response SLA</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="stats" id="stats">
+    <div class="stat">
+      <div class="stat-num">98<span>%</span></div>
+      <div class="stat-label">Uptime SLA</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">3<span>M+</span></div>
+      <div class="stat-label">Active Users</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">140<span>+</span></div>
+      <div class="stat-label">Countries</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">4<span>x</span></div>
+      <div class="stat-label">Faster Delivery</div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="testimonials" id="testimonials">
+    <div class="section-label">Client voices</div>
+    <h2 class="section-title">Trusted by teams who demand the best.</h2>
+    <div class="t-grid">
+      <div class="t-card">
+        <p class="t-quote">"Forma transformed how our team collaborates. We ship twice as fast with half the overhead. Genuinely remarkable."</p>
+        <div class="t-author">
+          <div class="t-avatar">SR</div>
+          <div>
+            <div class="t-name">Sara Rahman</div>
+            <div class="t-role">CTO, Nexus Labs</div>
+          </div>
+        </div>
+      </div>
+      <div class="t-card">
+        <p class="t-quote">"The analytics alone were worth switching. We finally understand our data and it actually drives decisions."</p>
+        <div class="t-author">
+          <div class="t-avatar">AK</div>
+          <div>
+            <div class="t-name">Ali Khan</div>
+            <div class="t-role">Head of Product, Drift</div>
+          </div>
+        </div>
+      </div>
+      <div class="t-card">
+        <p class="t-quote">"Onboarding was seamless and the support team is world-class. We've never looked back since switching."</p>
+        <div class="t-author">
+          <div class="t-avatar">MP</div>
+          <div>
+            <div class="t-name">Maria Perez</div>
+            <div class="t-role">VP Operations, Stride</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <h2 class="cta-title">Ready to build<br>something great?</h2>
+    <p class="cta-sub">Join thousands of teams already using Forma to do their best work.</p>
+    <button class="btn-white">Start for free — it's on us</button>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-logo">FORMA</div>
+    <ul class="footer-links">
+      <li><a href="#">Privacy</a></li>
+      <li><a href="#">Terms</a></li>
+      <li><a href="#">Docs</a></li>
+      <li><a href="#">Blog</a></li>
+    </ul>
+    <div class="footer-copy">© 2026 Forma Inc. All rights reserved.</div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // ─── CUSTOM CURSOR ───────────────────────────────────────
+    const cursor = document.getElementById('cursor');
+    const ring = document.getElementById('ring');
+    let mx = 0, my = 0, rx = 0, ry = 0;
+    document.addEventListener('mousemove', e => {
+      mx = e.clientX; my = e.clientY;
+      cursor.style.left = mx + 'px'; cursor.style.top = my + 'px';
+    });
+    function animateCursor() {
+      rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12;
+      ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+      requestAnimationFrame(animateCursor);
+    }
+    animateCursor();
+    document.querySelectorAll('button, a, .card').forEach(el => {
+      el.addEventListener('mouseenter', () => { ring.style.transform = 'translate(-50%,-50%) scale(2)'; ring.style.opacity = '0.2'; });
+      el.addEventListener('mouseleave', () => { ring.style.transform = 'translate(-50%,-50%) scale(1)'; ring.style.opacity = '0.5'; });
+    });
+
+    // ─── HERO THREE.JS SCENE ─────────────────────────────────
+    (function() {
+      const container = document.getElementById('canvas-container');
+      const canvas = document.getElementById('three-canvas');
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xf8f7f4);
+
+      let W = container.clientWidth, H = container.clientHeight;
+      renderer.setSize(W, H);
+
+      const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
+      camera.position.set(4, 2, 9);
+      camera.lookAt(0, 0, 0);
+
+      scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+      const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+      dir.position.set(5, 10, 5); dir.castShadow = true;
+      scene.add(dir);
+      const fill = new THREE.DirectionalLight(0xd0c8ff, 0.5);
+      fill.position.set(-5, 2, -5); scene.add(fill);
+
+      const group = new THREE.Group();
+      scene.add(group);
+
+      const matW = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.05 });
+      const matP = new THREE.MeshStandardMaterial({ color: 0x6b5ce7, roughness: 0.3, metalness: 0.1 });
+      const matG = new THREE.MeshStandardMaterial({ color: 0xe8e6f0, roughness: 0.4 });
+      const matD = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.3, metalness: 0.2 });
+
+      const box = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 1.4), matW);
+      box.castShadow = true; box.position.set(0, 0.2, 0);
+      group.add(box);
+
+      const t1 = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.06, 16, 60), matP);
+      t1.rotation.x = Math.PI / 2; t1.position.set(0, 0.2, 0);
+      group.add(t1);
+
+      const t2 = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.04, 16, 60), matG);
+      t2.rotation.set(Math.PI/3, Math.PI/5, 0); t2.position.set(0, 0.2, 0);
+      group.add(t2);
+
+      const s1 = new THREE.Mesh(new THREE.SphereGeometry(0.2, 32, 32), matP);
+      s1.position.set(2.2, 1.0, 0.5); group.add(s1);
+      const s2 = new THREE.Mesh(new THREE.SphereGeometry(0.12, 32, 32), matD);
+      s2.position.set(-2.0, -0.5, 1.0); group.add(s2);
+      const s3 = new THREE.Mesh(new THREE.SphereGeometry(0.15, 32, 32), matG);
+      s3.position.set(1.5, -1.2, -0.5); group.add(s3);
+
+      const shadow = new THREE.Mesh(new THREE.PlaneGeometry(30,30), new THREE.ShadowMaterial({ opacity: 0.07 }));
+      shadow.rotation.x = -Math.PI/2; shadow.position.y = -1.4; shadow.receiveShadow = true;
+      scene.add(shadow);
+
+      const particles = [];
+      for (let i = 0; i < 50; i++) {
+        const m = new THREE.Mesh(
+          new THREE.SphereGeometry(0.015 + Math.random()*0.025, 8, 8),
+          new THREE.MeshStandardMaterial({ color: Math.random()>0.5 ? 0x6b5ce7 : 0xcccccc })
+        );
+        m.position.set((Math.random()-0.5)*12,(Math.random()-0.5)*6,(Math.random()-0.5)*4-2);
+        m.userData = { vx:(Math.random()-0.5)*0.002, vy:(Math.random()-0.5)*0.002 };
+        scene.add(m); particles.push(m);
+      }
+
+      let mouse = { x:0, y:0 }, targetRot = { x:0, y:0 };
+      document.addEventListener('mousemove', e => {
+        const r = container.getBoundingClientRect();
+        mouse.x = ((e.clientX-r.left)/r.width - 0.5) * 2;
+        mouse.y = -((e.clientY-r.top)/r.height - 0.5) * 2;
+      });
+
+      let clk = 0;
+      (function tick() {
+        requestAnimationFrame(tick); clk += 0.008;
+        targetRot.y += (mouse.x*0.6 - targetRot.y)*0.05;
+        targetRot.x += (mouse.y*0.3 - targetRot.x)*0.05;
+        group.rotation.y = clk*0.3 + targetRot.y;
+        group.rotation.x = Math.sin(clk*0.5)*0.1 + targetRot.x;
+        box.position.y = 0.2 + Math.sin(clk*0.8)*0.12;
+        t1.rotation.z = clk*0.5; t2.rotation.z = -clk*0.3;
+        s1.position.y = 1.0 + Math.sin(clk*1.2)*0.2;
+        s2.position.y = -0.5 + Math.cos(clk*0.9)*0.15;
+        particles.forEach(p => {
+          p.position.x += p.userData.vx; p.position.y += p.userData.vy;
+          if(p.position.x>6) p.position.x=-6; if(p.position.x<-6) p.position.x=6;
+          if(p.position.y>3) p.position.y=-3; if(p.position.y<-3) p.position.y=3;
+        });
+        renderer.render(scene, camera);
+      })();
+
+      window.addEventListener('resize', () => {
+        W = container.clientWidth; H = container.clientHeight;
+        camera.aspect = W/H; camera.updateProjectionMatrix();
+        renderer.setSize(W, H);
+      });
+    })();
+
+    // ─── SHOWCASE THREE.JS SCENE ─────────────────────────────
+    (function() {
+      const el = document.getElementById('showcase-canvas');
+      const parent = el.parentElement;
+      const renderer = new THREE.WebGLRenderer({ canvas: el, antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x1a1a1a);
+
+      const W = parent.clientWidth, H = parent.clientHeight;
+      renderer.setSize(W, H);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(50, W/H, 0.1, 100);
+      camera.position.set(0, 0, 5);
+
+      scene.add(new THREE.AmbientLight(0x6b5ce7, 0.5));
+      const pt = new THREE.PointLight(0x6b5ce7, 2, 10);
+      pt.position.set(2, 2, 2); scene.add(pt);
+      const pt2 = new THREE.PointLight(0xffffff, 1, 10);
+      pt2.position.set(-2, -2, 2); scene.add(pt2);
+
+      const group = new THREE.Group();
+      scene.add(group);
+
+      const icoMat = new THREE.MeshStandardMaterial({ color: 0xffffff, wireframe: true, opacity: 0.15, transparent: true });
+      const ico = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 1), icoMat);
+      group.add(ico);
+
+      const solidMat = new THREE.MeshStandardMaterial({ color: 0x6b5ce7, roughness: 0.1, metalness: 0.8 });
+      const solid = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 0), solidMat);
+      group.add(solid);
+
+      const ringMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+      const ring1 = new THREE.Mesh(new THREE.TorusGeometry(2.0, 0.03, 8, 80), ringMat);
+      ring1.rotation.x = Math.PI/3; scene.add(ring1);
+      const ring2 = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.02, 8, 80), ringMat);
+      ring2.rotation.y = Math.PI/4; scene.add(ring2);
+
+      let clk = 0;
+      (function tick() {
+        requestAnimationFrame(tick); clk += 0.01;
+        group.rotation.y = clk * 0.4;
+        group.rotation.x = Math.sin(clk * 0.3) * 0.2;
+        ring1.rotation.z = clk * 0.2;
+        ring2.rotation.x = clk * 0.15;
+        pt.position.x = Math.cos(clk) * 3;
+        pt.position.y = Math.sin(clk * 0.7) * 2;
+        renderer.render(scene, camera);
+      })();
+    })();
+  </script>
+</body>
+</html>
